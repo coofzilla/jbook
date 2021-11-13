@@ -1,5 +1,19 @@
 import * as esbuild from 'esbuild-wasm';
 import axios from 'axios';
+import localforage from 'localforage';
+
+const fileCache = localforage.createInstance({
+  name: 'filecache',
+});
+
+//example stored in indexed DB
+// (async () => {
+//   await fileCache.setItem('color', 'red');
+
+//   const color = await fileCache.getItem('color');
+
+//   console.log(color);
+// })();
 
 export const unpkgPathPlugin = () => {
   return {
@@ -32,19 +46,30 @@ export const unpkgPathPlugin = () => {
           return {
             loader: 'jsx',
             contents: `
-            import React from 'react';
-            console.log(React);
+            import React, { useState } from 'react-select';
+            console.log(React, useState);
             `,
           };
         }
 
+        // check see if already fetched file
+        // and if in cache
+        const cachedResult = await fileCache.getItem(args.path);
+        // if it is, return immediately
+        if (cachedResult) {
+          return cachedResult;
+        }
         const { data, request } = await axios.get(args.path);
 
-        return {
+        const result = {
           loader: 'jsx',
           contents: data,
           resolveDir: new URL('./', request.responseURL).pathname,
         };
+        // store response in cache
+        await fileCache.setItem(args.path, result);
+
+        return result;
       });
     },
   };

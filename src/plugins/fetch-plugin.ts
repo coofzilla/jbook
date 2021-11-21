@@ -1,8 +1,8 @@
 import * as esbuild from 'esbuild-wasm';
 import axios from 'axios';
-import localforage from 'localforage';
+import localForage from 'localforage';
 
-const fileCache = localforage.createInstance({
+const fileCache = localForage.createInstance({
   name: 'filecache',
 });
 
@@ -18,23 +18,35 @@ export const fetchPlugin = (inputCode: string) => {
           };
         }
 
-        // check see if already fetched file
-        // and if in cache
-        const cachedResult = await fileCache.getItem<esbuild.OnLoadResult>(
-          args.path
-        );
-        // if it is, return immediately
-        if (cachedResult) {
-          return cachedResult;
-        }
+        // const cachedResult = await fileCache.getItem<esbuild.OnLoadResult>(
+        //   args.path
+        // );
+
+        // if (cachedResult) {
+        //   return cachedResult;
+        // }
         const { data, request } = await axios.get(args.path);
+
+        const fileType = args.path.match(/.css$/) ? 'css' : 'jsx';
+
+        const escaped = data
+          .replace(/\n/g, '')
+          .replace(/"/g, '\\"')
+          .replace(/'/g, "\\'");
+        const contents =
+          fileType === 'css'
+            ? `
+            const style = document.createElement('style');
+            style.innerText = '${escaped}';
+            document.head.appendChild(style);
+          `
+            : data;
 
         const result: esbuild.OnLoadResult = {
           loader: 'jsx',
-          contents: data,
+          contents,
           resolveDir: new URL('./', request.responseURL).pathname,
         };
-        // store response in cache
         await fileCache.setItem(args.path, result);
 
         return result;

@@ -6,6 +6,7 @@ import { fetchPlugin } from './plugins/fetch-plugin';
 
 const App = () => {
   const ref = useRef<any>();
+  const iframe = useRef<any>();
   const [input, setInput] = useState('');
   const [code, setCode] = useState('');
 
@@ -36,13 +37,28 @@ const App = () => {
       },
     });
 
-    setCode(result.outputFiles[0].text);
+    //setCode(result.outputFiles[0].text);
+    iframe.current.contentWindow.postMessage(result.outputFiles[0].text, '*');
   };
 
   const html = `
-  <script>
-  ${code}
-  </script>
+  <html>
+    <head></head>
+    <body>
+      <div id="root"></div>
+      <script>
+        window.addEventListener('message', (event) => {
+          try {
+            eval(event.data);
+          } catch(err){
+            const root = document.querySelector('#root');
+            root.innerHTML = '<div style="color: red;"><h4>Runtime Error</h4>' + err + '</div>'
+            console.error(err);
+          }
+        }, false);
+      </script>
+    </body>
+  </html>
 `;
 
   return (
@@ -55,7 +71,7 @@ const App = () => {
         <button onClick={onClick}>Submit</button>
       </div>
       <pre>{code}</pre>
-      <iframe srcDoc={html} sandbox="allow-scripts" title="none" />
+      <iframe ref={iframe} srcDoc={html} sandbox="allow-scripts" title="none" />
     </div>
   );
 };

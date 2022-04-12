@@ -55,6 +55,7 @@ const Preview: React.FC<PreviewProps> = ({ code, err }) => {
         srcDoc={html}
         sandbox="allow-scripts"
       />
+      {err && <div className="previous-error">{err}</div>}
     </div>
   );
 };
